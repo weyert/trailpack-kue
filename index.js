@@ -37,7 +37,7 @@ module.exports = class KueTrailpack extends Trailpack {
         return new Promise((resolve, reject) => {
           const uuid = require('uuid')
           const jobId = uuid.v4()
-          const job = this.app.kue.create('UpdateStatisticsTask', { id: uuid.v4(), body: JSON.stringify(payload)})
+          const job = this.app.kue.create('UpdateStatisticsTask', { id: uuid.v4(), body: payload})
           if (options && options.ttl) {
               job.ttl(options.ttl)
           }
