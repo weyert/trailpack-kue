@@ -33,6 +33,36 @@ module.exports = class KueTrailpack extends Trailpack {
    */
   configure() {
     // what to do?
+    this.app.tasker = {
+      publish: (taskName, payload, options = {}) => {
+        return new Promise((resolve, reject) => {
+          const uuid = require('uuid')
+          const jobId = uuid.v4()
+          const job = this.app.kue.create('UpdateStatisticsTask', { id: uuid.v4(), body: JSON.stringify(payload)})
+          if (options && options.ttl) {
+              job.ttl(options.ttl)
+          }
+          if (options && options.attempts) {
+              job.attempts(options.attempts)
+          }
+          if (options.priority) {
+              job.priority(options.priority)
+          }
+  
+          if (options.backoff) {
+              job.backoff(options.backoff)        
+          }
+          
+          job.save(err => {
+              if (err) {
+                return reject(err)
+              }
+
+              resolve(jobId)
+          })
+        })
+      }
+    }
   }
 
   async prepareQueue() {
@@ -41,27 +71,19 @@ module.exports = class KueTrailpack extends Trailpack {
     const isMasterInstance = !process.env.WORKER;
 
     // create the queue
-    this.app.tasker = kue.createQueue();
+    this.app.kue = kue.createQueue();
     if (isMasterInstance) {
-      this.app.tasker.on("job enqueue", job => {
+      this.app.kue.on("job enqueue", job => {
         this.app.log.info(`Job enqueued #${job}`);
       });
 
-      this.app.tasker.on("job complete", jobId => {
+      this.app.kue.on("job complete", jobId => {
         this.app.log.debug(`Job completed #${jobId}`);
       })
 
-      this.app.tasker.on("job failed", job => {
+      this.app.kue.on("job failed", job => {
         this.app.log.warn(`Job failed #${job}`);
       })
-
-
-      // Temporary trigger jobs
-      this.app.log.debug('Trigger job on master')
-      const uuid = require('uuid')
-      for (var i=0; i < 35; i++) {
-        const job = this.app.tasker.create('UpdateStatisticsTask', { id: uuid.v4(), body: 'my payload'}).ttl(50).attempts(3).save()                
-      }     
     } else {
       if (profile.tasks && profile.tasks.length === 0) {
           this.app.log.info(`No tasks defined for this worker ${process.env.WORKER}`)
@@ -72,7 +94,7 @@ module.exports = class KueTrailpack extends Trailpack {
         const taskName = profile.tasks[i]
         this.app.log.debug(`Preparing processing for ${taskName}`)
 
-        this.app.tasker.process(taskName, 10, async (job, ctx, done) => {
+        this.app.kue.process(taskName, 10, async (job, ctx, done) => {
           const { id, type: jobTaskName, data } = job.toJSON()
           this.app.log.debug(`Incoming job for task ${jobTaskName}: `, JSON.stringify(job))
           const TaskClass = this.app.api.tasks[jobTaskName]
