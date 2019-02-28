@@ -1,0 +1,41 @@
+{
+  "name": "trailpack-kue",
+  "version": "0.0.8",
+  "description": "Easily set up background workers with Kue",
+  "homepage": "https://github.com/weyert/trailpack-kue",
+  "author": {
+    "name": "Weyert de Boer"
+  },
+  "main": "index.js",
+  "keywords": [
+    "trailpack",
+    "trails",
+    "trailjs"
+  ],
+  "dependencies": {
+    "joi": "^14.3.1",
+    "kue": "^0.11.6",
+    "lodash": "^4.17.11",
+    "trailpack": "^2.1.0",
+    "trails-service": "^2.0.0",
+    "uuid": "^3.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^3.13.1",
+    "eslint-con^5.14.1ils": "^2.0.6",
+    "mocha": "^3.0.2",
+    "smokesignals": "^2.1.0",
+    "trails": "^2.0.0"
+  },
+  "scripts": {
+    "test": "eslint . && mocha"
+  },
+  "engines": {
+    "node": ">= 4.0.0"
+  },
+  "eslintConfig": {
+    "extends": "trails"
+  },
+  "repository": "git@github.com:weyert/trailpack-kue.git",
+  "license": "MIT"
+}
