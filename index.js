@@ -5,7 +5,6 @@ const lib = require("./lib");
 const _ = require("lodash");
 const joi = require("joi");
 const config = require("./lib/config");
-const TaskerUtils = require("./lib/Util.js");
 const kue = require("kue");
 
 module.exports = class KueTrailpack extends Trailpack {
