@@ -70,7 +70,9 @@ module.exports = class KueTrailpack extends Trailpack {
     const isMasterInstance = !process.env.WORKER;
 
     // create the queue
-    this.app.kue = kue.createQueue();
+    this.app.kue = kue.createQueue({
+      redis: taskerConfig.connection.uri,
+    });
     if (isMasterInstance) {
       this.app.kue.on("job enqueue", job => {
         this.app.log.info(`Job enqueued #${job}`);
