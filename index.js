@@ -37,7 +37,7 @@ module.exports = class KueTrailpack extends Trailpack {
         return new Promise((resolve, reject) => {
           const uuid = require('uuid')
           const jobId = uuid.v4()
-          const job = this.app.kue.create('UpdateStatisticsTask', { id: uuid.v4(), body: payload})
+          const job = this.app.kue.create(taskName, { id: uuid.v4(), body: payload})
           if (options && options.ttl) {
               job.ttl(options.ttl)
           }
@@ -93,9 +93,11 @@ module.exports = class KueTrailpack extends Trailpack {
 
       for (var i=0; i < profile.tasks.length; i++) {
         const taskName = profile.tasks[i]
+        const taskOptions = profile.taskOptions[taskName]
+        const { maxProcessors = 10 } =  taskOptions
         this.app.log.debug(`Preparing processing for ${taskName}`)
 
-        this.app.kue.process(taskName, 10, async (job, ctx, done) => {
+        this.app.kue.process(taskName, maxProcessors, async (job, ctx, done) => {
           const { id, type: jobTaskName, data } = job.toJSON()
           this.app.log.debug(`Incoming job for task ${jobTaskName}: `, JSON.stringify(job))
           const TaskClass = this.app.api.tasks[jobTaskName]
@@ -107,7 +109,7 @@ module.exports = class KueTrailpack extends Trailpack {
           const currentTask = new TaskClass(this.app, data, ctx, job)
           try {
             const result = await currentTask.run()
-            this.app.log.debug('Succesfully executed the task: ', JSON.stringify(result))
+            this.app.log.debug(`Succesfully executed the task ${taskName} with id: ${id} result: %s`, JSON.stringify(result))
             const finished = await currentTask.finalize()
             done(null, true)
           } catch(err) {
