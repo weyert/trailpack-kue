@@ -53,7 +53,7 @@ module.exports = class KueTrailpack extends Trailpack {
               job.backoff(options.backoff)        
           }
           
-          this.app.log.debug(`Enabling automatic cleanup for ${taskName} with job id: ${ujobIduid}`)
+          this.app.log.debug(`Enabling automatic cleanup for ${taskName} with job id: ${jobId}`)
           job.removeOnComplete(true)
           job.save(err => {
               if (err) {
@@ -112,7 +112,7 @@ module.exports = class KueTrailpack extends Trailpack {
           this.app.log.debug(`Something went wrong while processing job: %s`, err)
         })
 
-        //this.app.kue.watchStuckJobs(1000)
+        // this.app.kue.watchStuckJobs(1000)
 
         this.app.kue.process(taskName, maxProcessors, async (job, ctx, done) => {
           const { id, type: jobTaskName, data } = job.toJSON()
