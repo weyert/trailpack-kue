@@ -34,6 +34,7 @@ module.exports = class KueTrailpack extends Trailpack {
     // what to do?
     this.app.tasker = {
       publish: (taskName, payload, options = {}) => {
+        this.app.log.debug(`Publishing task ${taskName} queued for execution`)
         return new Promise((resolve, reject) => {
           const uuid = require('uuid')
           const jobId = uuid.v4()
@@ -52,6 +53,8 @@ module.exports = class KueTrailpack extends Trailpack {
               job.backoff(options.backoff)        
           }
           
+          this.app.log.debug(`Enabling automatic cleanup for ${taskName} with job id: ${ujobIduid}`)
+          job.removeOnComplete(true)
           job.save(err => {
               if (err) {
                 return reject(err)
@@ -71,8 +74,10 @@ module.exports = class KueTrailpack extends Trailpack {
 
     // create the queue
     this.app.kue = kue.createQueue({
+      jobEvents: false,
       redis: taskerConfig.connection.uri,
     });
+
     if (isMasterInstance) {
       this.app.kue.on("job enqueue", job => {
         this.app.log.info(`Job enqueued #${job}`);
@@ -85,6 +90,12 @@ module.exports = class KueTrailpack extends Trailpack {
       this.app.kue.on("job failed", job => {
         this.app.log.warn(`Job failed #${job}`);
       })
+
+      this.app.on( 'error', function( err ) {
+        console.log( 'Oops... ', err );
+      })
+
+      this.app.kue.watchStuckJobs(1000)
     } else {
       if (profile.tasks && profile.tasks.length === 0) {
           this.app.log.info(`No tasks defined for this worker ${process.env.WORKER}`)
@@ -96,6 +107,12 @@ module.exports = class KueTrailpack extends Trailpack {
         const taskOptions = profile.taskOptions[taskName]
         const { maxProcessors = 10 } =  taskOptions
         this.app.log.debug(`Preparing processing for ${taskName}`)
+
+        this.app.on( 'error',  err => {
+          this.app.log.debug(`Something went wrong while processing job: %s`, err)
+        })
+
+        //this.app.kue.watchStuckJobs(1000)
 
         this.app.kue.process(taskName, maxProcessors, async (job, ctx, done) => {
           const { id, type: jobTaskName, data } = job.toJSON()
@@ -137,6 +154,20 @@ module.exports = class KueTrailpack extends Trailpack {
 
   unload () {
     this.app.log.info('Trailpack.unload(): Unloading the queue')
+    return new Promise((resolve, reject) => {
+      if (!this.app.kue) {
+        return Promise.resolve()
+      }
+
+      this.app.kue.shutdown(5000, (err) => {
+        if (err) {
+          return reject(err)
+        }
+
+        console.log('Successfully terminated the kue')
+        return resolve(true)
+      })  
+    })
   }
 
   constructor(app) {
